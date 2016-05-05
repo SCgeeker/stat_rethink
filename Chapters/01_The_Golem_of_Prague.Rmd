@@ -1,0 +1,16 @@
+---
+title: "01_The_Golem_of_Prague"
+author: "Sau-Chin Chen"
+date: "2016年4月8日"
+output: html_document
+---
+
+## Metaphor of Golem
+
+
+
+## Scientists criticize the models rather than hypotheses
+
+
+
+## Necessity of being a model engineer

@@ -1,0 +1,159 @@
+---
+title: "02_Small_Worlds_and_Large_Worlds"
+author: "Sau-Chin Chen"
+date: "2016年4月8日"
+output: html_document
+---
+
+## Review Bayes' Theorem
+
+[wiki entry](https://en.wikipedia.org/wiki/Bayes%27_theorem)
+
+## Probability across worlds
+For given events, the probabilities are predescribed in a small world, but the probabilities are dynamic in a large world. 
+
+```{r code2_1, echo=TRUE, message=FALSE, warning=FALSE}
+ways <- c(0, 3, 8, 9, 0) # Ways to produce data
+ways/sum(ways) # plausibility = products/sum of products
+```
+
+## Staring characters(Key terms)
+- **PARAMETER** a conjectured proportion of given data, *p*.
+- **LIKELIHOOD** the relative number of ways that the **PARAMETER** *p* can produce the data.
+- **PRIOR PROBABILITY** the prior plausibility of any specific *p*.
+- **POSTERIOR PROBABILITY** the updated plausibility of any pecific *p*.
+
+## The drama: building a model
+
+
+### 1. A data story
+
+
+### 2. Bayesian updating
+process of updating the model: plausibility ~ events(*p*)
+
+### 3. Evaluate
+There are two cautions being keep in mind while evaluating. (1) the model's certainty is no guarantee that the model is a good one. (2) it is important to supervise and critique your model's work.
+
+## Components of the model
+
+### 1. Likelihood
+
+Likelihood specifies the plausibility of the data. What this means is that the likelihood maps each conjecture.
+
+```{r data story, echo=TRUE, message=FALSE, warning=FALSE}
+dbinom(6, size = 9, prob = 0.5) # 6 water and 3 land
+```
+
+*p* = 0.5
+*n* = 9
+
+In this case, likelihood function is L(*p*|*w*,*n*).
+
+- In Bayesian and non-Bayesian analysis, **the assumptions about the likelihood** influence inference for every piece of data, and as sample size increases, the likelihood matters more and more.
+
+### 2. Parameters
+
+
+### 3. Prior
+
+
+### 4. Poterior
+`Here is Bayes' theorem`
+We have a posterior function: Pr(*p*|*n*, *w*)
+
+1. The joint probability of the data *w* and any particular value of *p* is the product of likelihood Pr(*w*|*p*) and the prior probability Pr(*p*):
+</br>
+Pr(*w*, *p*) = Pr(*w*|*p*)Pr(*p*)
+</br>
+2. The oint probability of the data *w* and any particular value of *p* is the product of likelihood Pr(*p*|*w*) and the prior probability Pr(*w*):
+</br>
+Pr(*w*, *p*) = Pr(*p*|*w*)Pr(*w*)
+</br>
+3. In the cae we have known Pr(*w*|*p*), we could solve Pr(*p*|*w*):
+</br>
+Pr(*p*|*w*) = Pr(*w*|*p*)Pr(*p*)/Pr(*w*)
+</br>
+4. We call Pr(*w*) **Average Likelihood**. Therefore we have **Posterior = Likelihod X Prior/Averae Likelihood**.
+
+5. **Average Likelihood** used to average over the prior. We have the mathematical form of standardized posterior: 
+
+[Edit in Latex]
+
+6. The posterior i proportional to the product of the prior and the likelihood.
+
+## Making Model Go
+In this book, there are three different conditioning engines, numerical techniques for computing posterior distributions:
+
+### 1. Grid approximation 
+
+**This method is useful for the single-parameter model.**
+
+I will reproduce Figure 2.6 in the next chunck.
+
+```{r grid_approximation, echo=TRUE, message=FALSE, warning=FALSE}
+# Define the grid. This means you decide how many points to use in estimating the posterior, and then you make a list of the parameter values on the grid. 
+# In this example, we decide 20 points.
+p_grid <- seq( from = 0, to = 1, length.out = 20)
+
+# Compute the value of the prior at each parameter value on the grid. 
+# This prior is a flat function
+prior_1 <- rep( 1, 20 )
+# This prior is a step function
+prior_2 <- ifelse( p_grid < 0.5, 0, 1 )
+# This prior is a peak function
+prior_3 <- exp( -5*abs( p_grid - 0.5 ) )
+
+# Compute the likelihood at each parameter value.
+likelihood <- dbinom( 6, size = 9, prob = p_grid)
+
+# Compute the unstandardized posterior at each parameter value, by multiplying the prior by the likelihood. 
+unstd.posterior_1 <- prior_1 * likelihood
+unstd.posterior_2 <- prior_2 * likelihood
+unstd.posterior_3 <- prior_3 * likelihood
+
+# Finally, standardize the posterior, by dividing each value by the sum of all values.
+posterior_1 <- unstd.posterior_1 / sum(unstd.posterior_1)
+posterior_2 <- unstd.posterior_2 / sum(unstd.posterior_2)
+posterior_3 <- unstd.posterior_3 / sum(unstd.posterior_3)
+
+# Plot the output of grid approximation
+plot( p_grid, posterior_1, type = "b",
+      xlab = "probability of water", ylab = "posterior probability", main = "Flat Prior")
+plot( p_grid, posterior_2, type = "b",
+      xlab = "probability of water", ylab = "posterior probability", main = "Step Prior")
+plot( p_grid, posterior_3, type = "b",
+      xlab = "probability of water", ylab = "posterior probability", main = "Peak Prior")
+```
+
+
+### 2. Quadratic approximation 
+Under quite general conditions, the region near the peak of the posterior distribution will be nearly Gaussian—or “normal”—in shape. The advantage is that the posterior distribution can be completely described by only two numbers: the location of its center (mean) and its spread (variance).
+
+In this example, the likelihood and prior are the uncertain parameters.
+```{r Quadratic_Approximation, echo=TRUE, message=FALSE, warning=FALSE}
+if(!require(rethinking)){devtools::install_github("rmcelreath/rethinking")}
+require(rethinking)
+globe.qa <- map(
+        alist(
+            w ~ dbinom(9, p), # binomial likelihood
+            p ~ dunif(0, 1)   # uniform prior
+        ),
+data = list(w=6))
+
+# display summary of quadratic approximation
+precis( globe.qa )
+```
+We got a prior distrubition having a mean `0.67` and a standard deviation `0.16`.
+
+```{r analyze_approx, echo=TRUE, message=FALSE, warning=FALSE}
+# analytical calculation
+w <- 6
+n <- 9
+curve( dbeta( x, w+1, n-w+1 ) , from = 0, to = 1 )
+curve( dnorm( x, 0.67, 0.16 ), lty=2, add = TRUE )
+```
+
+
+### 3. Markov chain Monte Carlo (MCMC) 
+This method is useful for the models with hundreds or thousands or tens-of-thousands of parameters, like multilevel models.
